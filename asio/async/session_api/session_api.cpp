@@ -1,4 +1,4 @@
-#include "session.h"
+#include "session_api.h"
 
 #include <functional>
 
@@ -136,7 +136,21 @@ void Session::WriteAllToSocket(const std::string& buf) {
     send_pending_ = true;
 }
 
-void Session::ReadCallBack(const boost::system::error_code& ec, std::size_t bytes_transferred) {}
+void Session::ReadCallBack(const boost::system::error_code& ec, std::size_t bytes_transferred) {
+    recv_node_->cur_len_ += bytes_transferred;
+    if (recv_node_->cur_len_ < recv_node_->total_len_) {
+        sock_ptr_->async_read_some(
+            boost::asio::buffer(recv_node_->msg_ + recv_node_->cur_len_,
+                                recv_node_->total_len_ - recv_node_->cur_len_),
+            [this](const boost::system::error_code& ec, std::size_t bytes_transferred) {
+                ReadCallBack(ec, bytes_transferred);
+            });
+    } else {
+        send_pending_ = false;
+    }
+}
+
+// 为什么接收消息不需要像发送消息一样采用队列
 void Session::ReadFromSocket() {
     if (recv_pending_) {
         return;  // 若还在接收则->回调函数
@@ -147,4 +161,26 @@ void Session::ReadFromSocket() {
         [this](const boost::system::error_code& ec, std::size_t bytes_transferred) {
             ReadCallBack(ec, bytes_transferred);
         });
+    // 下次读发现是true就不会调用异步读
+    // 而是在上一次的回调函数中进行
+    // 只有当回调函数结束后才将recv_pending_置为false
+    recv_pending_ = true;
+}
+
+void Session::ReadAllCallBack(const boost::system::error_code& ec, std::size_t bytes_transferred) {
+    recv_node_->cur_len_ += bytes_transferred;
+    send_pending_ = false;
+}
+
+void Session::ReadAllFromSocket() {
+    if (recv_pending_) {
+        return;  // 若还在接收则->回调函数
+    }
+    recv_node_ = std::make_shared<MsgNode>(kRecvSize);  // 创建一个接收消息结点(长度1024)
+    sock_ptr_->async_receive(
+        boost::asio::buffer(recv_node_->msg_, recv_node_->total_len_),
+        [this](const boost::system::error_code& ec, std::size_t bytes_transferred) {
+            ReadCallBack(ec, bytes_transferred);
+        });
+    recv_pending_ = true;
 }

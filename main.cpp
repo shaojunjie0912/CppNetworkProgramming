@@ -4,8 +4,6 @@
 #include <iostream>
 #include <string>
 
-#include "boost/asio/ip/tcp.hpp"
-
 using namespace boost;
 using std::cout;
 using std::endl;

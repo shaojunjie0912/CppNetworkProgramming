@@ -1,3 +1,5 @@
+#pragma once
+
 #include <boost/asio.hpp>
 #include <cstring>
 #include <iostream>
@@ -51,14 +53,19 @@ public:
     void WriteToSocket(const std::string& buf);
 
     // Better:
-    // NOTE: (实际可以采用这种简单方式)尽量避免多次调用回调函数
+    // NOTE: (公司实际采用这种简单方式)尽量避免多次调用回调函数
     void WriteAllCallBack(const boost::system::error_code& ec, std::size_t bytes_transferred);
     void WriteAllToSocket(const std::string& buf);
 
 public:
     // ----------------------- 异步读 -----------------------
+    // Good: 部分读
+    // NOTE: (公司实际采用这种部分读方式)保证读取效率
     void ReadCallBack(const boost::system::error_code& ec, std::size_t bytes_transferred);
     void ReadFromSocket();
+    // Aslo Good: 一次性读
+    void ReadAllCallBack(const boost::system::error_code& ec, std::size_t bytes_transferred);
+    void ReadAllFromSocket();
 
 private:
     std::shared_ptr<tcp::socket> sock_ptr_;
