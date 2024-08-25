@@ -1,0 +1,7 @@
+target("beast_http_server", function()
+    set_kind("binary")
+    set_encodings("source:utf-8")
+    add_files("src/*.cpp")
+    add_includedirs("include")
+    add_packages("boost")
+end)
