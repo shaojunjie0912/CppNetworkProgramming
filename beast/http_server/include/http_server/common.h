@@ -1,6 +1,7 @@
 #pragma once
 
 #include <http_server/singleton.h>
+#include <json/json.h>
 
 #include <boost/asio.hpp>
 #include <boost/beast.hpp>
@@ -19,3 +20,9 @@ using namespace boost::beast;
 using namespace boost::asio;
 
 using boost::asio::ip::tcp;
+
+enum class ErrorCodes {
+    Success = 0,
+    Error_Json = 1001,  // Json 解析错误
+    Rpc_Failed = 1002   // Rpc 请求错误
+};
