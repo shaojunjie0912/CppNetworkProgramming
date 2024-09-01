@@ -2,10 +2,10 @@
 
 #include <functional>
 
-Session::Session(std::shared_ptr<tcp::socket> sock_ptr)
+CSession::CSession(std::shared_ptr<tcp::socket> sock_ptr)
     : sock_ptr_(sock_ptr), send_pending_(false), recv_pending_(false) {}
 
-void Session::Connection(const tcp::endpoint& ep) {
+void CSession::Connection(const tcp::endpoint& ep) {
     sock_ptr_->connect(ep);
 }
 
@@ -15,8 +15,8 @@ void Session::Connection(const tcp::endpoint& ep) {
 // 3. 异步写操作完成，系统通知 io_service
 // 4. io_service 调用 回调函数(此时会获得已经发送的字节数)
 
-void Session::WriteCallBackErr(const boost::system::error_code& ec, std::size_t bytes_transferred,
-                               std::shared_ptr<MsgNode>) {
+void CSession::WriteCallBackErr(const boost::system::error_code& ec, std::size_t bytes_transferred,
+                                std::shared_ptr<MsgNode>) {
     if (ec.value() != 0) {
         std::cout << "Error , code is " << ec.value() << " . Message is " << ec.message();
         return;
@@ -29,17 +29,17 @@ void Session::WriteCallBackErr(const boost::system::error_code& ec, std::size_t 
             // buffer 长度构造要同步变化
             boost::asio::buffer(send_node_->msg_ + send_node_->cur_len_,
                                 send_node_->total_len_ - send_node_->cur_len_),
-            std::bind(&Session::WriteCallBackErr, this, std::placeholders::_1,
+            std::bind(&CSession::WriteCallBackErr, this, std::placeholders::_1,
                       std::placeholders::_2, send_node_));
     }
 }
 
-void Session::WriteToSocketErr(const std::string& buf) {
+void CSession::WriteToSocketErr(const std::string& buf) {
     send_node_ = std::make_shared<MsgNode>(buf.c_str(), buf.size());
     // 1. 神奇的函数绑定 参数 3->2，以适配async_write_some回调函数格式
     // 2. 也可以使用lambda
     // sock_ptr_->async_write_some(boost::asio::buffer(send_node_->msg_, send_node_->total_len_),
-    //                             std::bind(&Session::WriteCallBackErr, this,
+    //                             std::bind(&CSession::WriteCallBackErr, this,
     //                             std::placeholders::_1,
     //                                       std::placeholders::_2, send_node_));
     sock_ptr_->async_write_some(
@@ -49,7 +49,7 @@ void Session::WriteToSocketErr(const std::string& buf) {
         });
 }
 
-void Session::WriteCallBack(const boost::system::error_code& ec, std::size_t bytes_transferred) {
+void CSession::WriteCallBack(const boost::system::error_code& ec, std::size_t bytes_transferred) {
     // ec值不为0说明出错
     if (ec.value() != 0) {
         std::cout << "Error , code is " << ec.value() << " . Message is " << ec.message();
@@ -82,7 +82,7 @@ void Session::WriteCallBack(const boost::system::error_code& ec, std::size_t byt
     }
 }
 
-void Session::WriteToSocket(const std::string& buf) {
+void CSession::WriteToSocket(const std::string& buf) {
     send_queue_.emplace(new MsgNode(buf.c_str(), buf.size()));
     if (send_pending_) {  // 若还在发送则->回调函数
         return;
@@ -97,7 +97,8 @@ void Session::WriteToSocket(const std::string& buf) {
     send_pending_ = true;
 }
 
-void Session::WriteAllCallBack(const boost::system::error_code& ec, std::size_t bytes_transferred) {
+void CSession::WriteAllCallBack(const boost::system::error_code& ec,
+                                std::size_t bytes_transferred) {
     if (ec.value() != 0) {
         std::cout << "Error , code is " << ec.value() << " . Message is " << ec.message();
         return;
@@ -122,7 +123,7 @@ void Session::WriteAllCallBack(const boost::system::error_code& ec, std::size_t 
     }
 }
 
-void Session::WriteAllToSocket(const std::string& buf) {
+void CSession::WriteAllToSocket(const std::string& buf) {
     send_queue_.emplace(new MsgNode(buf.c_str(), buf.size()));
     if (send_pending_) {
         return;  // 若还在发送则->回调函数
@@ -136,7 +137,7 @@ void Session::WriteAllToSocket(const std::string& buf) {
     send_pending_ = true;
 }
 
-void Session::ReadCallBack(const boost::system::error_code& ec, std::size_t bytes_transferred) {
+void CSession::ReadCallBack(const boost::system::error_code& ec, std::size_t bytes_transferred) {
     recv_node_->cur_len_ += bytes_transferred;
     if (recv_node_->cur_len_ < recv_node_->total_len_) {
         sock_ptr_->async_read_some(
@@ -151,7 +152,7 @@ void Session::ReadCallBack(const boost::system::error_code& ec, std::size_t byte
 }
 
 // 为什么接收消息不需要像发送消息一样采用队列
-void Session::ReadFromSocket() {
+void CSession::ReadFromSocket() {
     if (recv_pending_) {
         return;  // 若还在接收则->回调函数
     }
@@ -167,12 +168,12 @@ void Session::ReadFromSocket() {
     recv_pending_ = true;
 }
 
-void Session::ReadAllCallBack(const boost::system::error_code& ec, std::size_t bytes_transferred) {
+void CSession::ReadAllCallBack(const boost::system::error_code& ec, std::size_t bytes_transferred) {
     recv_node_->cur_len_ += bytes_transferred;
     send_pending_ = false;
 }
 
-void Session::ReadAllFromSocket() {
+void CSession::ReadAllFromSocket() {
     if (recv_pending_) {
         return;  // 若还在接收则->回调函数
     }

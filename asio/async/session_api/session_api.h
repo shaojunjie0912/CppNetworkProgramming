@@ -33,9 +33,9 @@ struct MsgNode {
 // 会话类
 // 1. 异步写
 // 2. 异步读
-class Session {
+class CSession {
 public:
-    Session(std::shared_ptr<tcp::socket> sock_ptr);
+    CSession(std::shared_ptr<tcp::socket> sock_ptr);
     void Connection(const tcp::endpoint& ep);
 
 public:

@@ -13,7 +13,7 @@ std::set<std::shared_ptr<std::thread>> thread_set;  // 线程指针集合
 
 const int max_length = 1024;
 
-void Session(socket_ptr sock_ptr) {
+void CSession(socket_ptr sock_ptr) {
     try {
         for (;;) {
             char data[max_length];
@@ -36,7 +36,7 @@ void Session(socket_ptr sock_ptr) {
     }
 }
 
-void Server(boost::asio::io_context& ioc, uint16_t port) {
+void CServer(boost::asio::io_context& ioc, uint16_t port) {
     // 创建监听套接字
     tcp::acceptor a{ioc, tcp::endpoint{tcp::v4(), port}};
     while (true) {
@@ -44,7 +44,7 @@ void Server(boost::asio::io_context& ioc, uint16_t port) {
         socket_ptr sock_ptr{new tcp::socket{ioc}};
         a.accept(*sock_ptr);
         // 创建自定义的处理连接的线程
-        auto t{std::make_shared<std::thread>(Session, sock_ptr)};
+        auto t{std::make_shared<std::thread>(CSession, sock_ptr)};
         thread_set.insert(t);  // 生命周期与全局变量thread_set一样长
     }
 }
@@ -52,7 +52,7 @@ void Server(boost::asio::io_context& ioc, uint16_t port) {
 int main() {
     try {
         boost::asio::io_context ioc;
-        Server(ioc, 10086);
+        CServer(ioc, 8080);
         for (auto& t : thread_set) {
             t->join();
         }

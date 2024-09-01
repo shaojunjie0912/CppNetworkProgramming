@@ -1,0 +1,6 @@
+target("bad_echo_server", function()
+    set_kind("binary")
+    set_encodings("source:utf-8")
+    add_files("*.cpp")
+    add_packages("boost")
+end)
